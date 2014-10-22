@@ -252,7 +252,7 @@ public class BufferManager
             curDBFile.readPage(pinPageId, curPage);
         }
         // push the page to the buffer pool
-        bufferPool.add(curPage);
+        bufferPool[indexOfemptyFrame] = curPage;
         // establish the key-value relationship in the myMap
         int indexOfValue = Arrays.asList(bufferPool).indexOf(curPage);
         myMap.put(pinPageId, indexOfValue);
@@ -302,20 +302,13 @@ public class BufferManager
         throws IOException
     {
         DBFile dbFile = new DBFile(fileName);
-        if (iffull(frameTable) != FRAME_IS_FULL){
-            int firstPageID = dbFile.allocatePages(numPages);
-            if (empty){
-                Page curPage = pinPage(firstPageID, fileName, true);
-            } else {
-                Page curPage = pinPage(firstPageID, fileName, false);
-            }
+        if (ifFull(frameTable) != FRAME_IS_FULL){
+            int firstPageId = dbFile.allocatePages(numPages);
+            // Summing the first page is not empty
+            Page curPage = pinPage(firstPageId, fileName, false);
         }
-        Pair pair = new Pair(firstPageID, curPage);
-        return pair;
-       
-        
-        
-        
+        Pair<Integer, Page> pair = new Pair(firstPageId, curPage);
+        return pair;       
     }
 
     /**
