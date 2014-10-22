@@ -304,11 +304,12 @@ public class BufferManager
         DBFile dbFile = new DBFile(fileName);
         if (ifFull(frameTable) != FRAME_IS_FULL){
             int firstPageId = dbFile.allocatePages(numPages);
-            // Summing the first page is not empty
+            // Assumming the first page is not empty
             Page curPage = pinPage(firstPageId, fileName, false);
+            Pair<Integer, Page> pair = new Pair(firstPageId, curPage);
+            return pair;       
         }
-        Pair<Integer, Page> pair = new Pair(firstPageId, curPage);
-        return pair;       
+        return null;
     }
 
     /**
@@ -362,5 +363,7 @@ public class BufferManager
     */
     public int findFrame(int pageId, String fileName)
     {
+        return 1;
     }
+
 }
