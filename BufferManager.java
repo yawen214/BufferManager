@@ -256,7 +256,7 @@ public class BufferManager
         throws IOException
     {
         for (FrameDescriptor FDescriptor: frameTable){
-            if (unpinPageId == FDescriptor.getPageNum()) {
+            if (FDescriptor != null && unpinPageId == FDescriptor.getPageNum()) {
                 if (FDescriptor.getPinCount() > 0) FDescriptor.decreasePinCount();
                 else if (FDescriptor.getPinCount()==0) FDescriptor.setUnpinned();
                 else throw new PageNotPinnedException();
