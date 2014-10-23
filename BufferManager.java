@@ -37,15 +37,19 @@ public class BufferManager
             dirty = false;
             pinned = true;
         }
+
         private void setFileName(String str){
             this.fileName= fileName;
         }
+
         private String getFileName(){
             return this.fileName;
         }
+
         private void setpageNum(int pageID){
             this.pageNum = pageID;
         }
+
         private int getPageNum(){
             return this.pageNum;
         }
@@ -53,21 +57,27 @@ public class BufferManager
         private void increasePinCount(){
             this.pinCount++;
         }
+
         private void decreasePinCount(){
             this.pinCount--;
         }
+
         private int getPinCount(){
             return this.pinCount;
         }
+
         private void setDirty(){
             this.dirty = !this.dirty;
         }
+
         private boolean getDirty(){
             return this.dirty;
         }
+
         private void setUnpinned(){
             this.pinned = !this.pinned;
         }
+
         private boolean ifPinned(){
             return this.pinned;
         }
@@ -99,8 +109,8 @@ public class BufferManager
     
     /**
      *Check if the FrameDescriptor is full
-     *Return a constant int value of -20 if it is full
-     *Otherwise,return the index of frameDescriptor for which we can pin the page
+     *@param frameTable is a list of FrameDescriptor we are about to check
+     *@return the index of replacement for which we can pin the page or a constant int value of -20 if it is full
      **/
     public int ifFull(FrameDescriptor[] frameTable){
         for (FrameDescriptor descriptor: frameTable){
@@ -111,7 +121,12 @@ public class BufferManager
         return FRAME_IS_FULL;
     }
     
-    // if the frameTable is full, we use the clock replacement policy and return the index of the frame in FDescriptor for which we can use to replace.
+    /**
+    *if the frameTable is full, 
+    *we use the clock replacement policy and return the index of the frame in FDescriptor for which we can use to replace.
+    *@param frameTable is a list of FrameDescriptor we are about to check
+    *@return index of replacement on the frameDescriptor
+    **/
     private int getClockIndex(FrameDescriptor[] frameTable)
     {
         int curIndex = curClockIndex;
@@ -145,11 +160,11 @@ public class BufferManager
     }
 
 
-    /*
+    /**
     * this method checks if given page is in the buffer pool.
-    *@param: pageID.
-    *@return boolean
-    */
+    *@param given pageId 
+    *@return boolean, true if the given page is in bufferPool already.
+    **/
     private boolean checkIfInPool(int pageId)
     {
         if (!myMap.containsKey(pageId)) return false;
@@ -189,12 +204,10 @@ public class BufferManager
         //Now that the page is not in the buffer pool yet, check if the frameTable is full
         if (ifFull(frameTable) == FRAME_IS_FULL){
             //replace
-            int localPageId= 0; //initializing local pageId
-            int indexOfReplace = getClockIndex(frameTable); //find the index of replacement;
-            if (frameTable[indexOfReplace].getDirty()){ //check if the page in the index we choose is dirty or not
-                localPageId = frameTable[indexOfReplace].getPageNum();
-                curDBFile.writePage(localPageId, bufferPool[myMap.get(localPageId)]); //writes the old page to the disk before we replace it
-            }
+
+            int indexOfReplace = getClockIndex(frameTable); //find the index of replacement
+            int localPageId=frameTable[indexOfReplace].getPageNum();
+            flushPage(localPageId,fileName); // flushPage takes care of page that is dirty
             // read the actual page from the database.
             curPage = new Page();
             //check to see if the page is empty, if so we don't need to read the page from the disk . but we still need to
@@ -224,7 +237,6 @@ public class BufferManager
         curFDescriptor.setFileName(fileName);
         //add the new frame in to the frame table
         frameTable[indexOfemptyFrame] = curFDescriptor;
-//frameTable.add(indexOfemptyFrame, curFDescriptor);
         
         // read the actual page from the database.
         curPage = new Page();
@@ -320,6 +332,17 @@ public class BufferManager
      */
     public void flushPage(int pageId, String fileName) throws IOException
     {
+        DBFile dbFile = new DBFile(fileName);
+        int bufferIndex = myMap.get(pageId);
+        Page curPage = bufferPool[bufferIndex];
+        for (FrameDescriptor fDestriptor: frameTable){
+            if (fDestriptor.getPageNum()== pageId){
+                 if (fDestriptor.getDirty()) {
+                    dbFile.writePage(pageId,curPage);
+                    fDestriptor.setDirty();
+                 }
+            }
+        }
     }
 
     /**
