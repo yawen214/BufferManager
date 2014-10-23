@@ -134,12 +134,6 @@ public class BufferManager
         return this.curClockIndex;
     }
     
-//    private void increaseClockIndex(){
-//        int curIndex = this.curClockIndex;
-//        if (0 <=curIndex <poolSize-1) this.curClockIndex++;
-//        else if (curIndex = poolSize-1) this.curClockIndex = 0;
-//    }
-    
     
     /**
      * Returns the pool size.
@@ -179,31 +173,27 @@ public class BufferManager
     public Page pinPage(int pinPageId, String fileName, boolean emptyPage)
         throws IOException
     {
-        DBFile curDBFile = new DBFile(fileName);
+        DBFile curDBFile = new DBFile(fileName); // create a new DBFile 
         Page curPage;
         int poolSize = poolSize();
-        //if (emptyPage) return null;
+        // If  the page is already in the pool, return a pointer to it;
         if (checkIfInPool(pinPageId)) {
-            int pageIndex = myMap.get(pinPageId);
+            int pageIndex = myMap.get(pinPageId); //hash table stroing the pageId as the key and the index of the page in the buffer pool as the value
             for (int i=0; i<poolSize; i++){
                 if (frameTable[i].getPageNum() == pinPageId){
-                    if (frameTable[i].getDirty()){
-                        curPage = bufferPool[myMap.get(pinPageId)];
-                        frameTable[i].setDirty();                       
-                    }
                     frameTable[i].increasePinCount();
+                    return bufferPool[pageIndex];
                 }
             }
-            return bufferPool[pageIndex];
         }
-        //Check if the frameTable is full
+        //Now that the page is not in the buffer pool yet, check if the frameTable is full
         if (ifFull(frameTable) == FRAME_IS_FULL){
             //replace
-            int localPageId= 0;
-            int indexOfReplace = getClockIndex(frameTable);
-            if (frameTable[indexOfReplace].getDirty()){
+            int localPageId= 0; //initializing local pageId
+            int indexOfReplace = getClockIndex(frameTable); //find the index of replacement;
+            if (frameTable[indexOfReplace].getDirty()){ //check if the page in the index we choose is dirty or not
                 localPageId = frameTable[indexOfReplace].getPageNum();
-                curDBFile.writePage(localPageId, bufferPool[myMap.get(localPageId)]);
+                curDBFile.writePage(localPageId, bufferPool[myMap.get(localPageId)]); //writes the old page to the disk before we replace it
             }
             // read the actual page from the database.
             curPage = new Page();
@@ -219,24 +209,14 @@ public class BufferManager
             curFDescriptor.setFileName(fileName);
             //add the new frame in to the frame tableble
             frameTable[indexOfReplace] = curFDescriptor;
-    //This might be wrong: frameTable.add(indexOfReplace, curFDescriptor);
             // delete the old page in the buffer pool and add replace with new page
             bufferPool[myMap.get(localPageId)] = curPage;
-
-
-    // List<Page> list = new ArrayList<Page>(Arrays.asList(bufferPool));
-     //list.removeAll(Arrays.asList(bufferPool[myMap[localPageId]]));
-    //bufferPool = list.toArray(bufferPool);
-    //bufferPool.add(curPage);
-
             // delete the old entry in the hashmap and insert new entry
-            myMap.remove(localPageId);
-            int indexOfValue = Arrays.asList(bufferPool).indexOf(curPage);
-            myMap.put(pinPageId, indexOfValue);
-            return curPage;
-            
+            int indexForInsert = Arrays.asList(bufferPool).indexOf(curPage);
+            myMap.put(pinPageId, indexForInsert);
+            return curPage;          
         }
-        // add to existing empty frames
+        // When the frame descriptor still has empty space: add to existing empty frames
         int indexOfemptyFrame = ifFull(frameTable);
         FrameDescriptor curFDescriptor = new FrameDescriptor();
         curFDescriptor.setpageNum(pinPageId);
@@ -256,8 +236,7 @@ public class BufferManager
         // establish the key-value relationship in the myMap
         int indexOfValue = Arrays.asList(bufferPool).indexOf(curPage);
         myMap.put(pinPageId, indexOfValue);
-        return curPage;
-        
+        return curPage;        
     }
 
     /**
@@ -277,10 +256,12 @@ public class BufferManager
         throws IOException
     {
         for (FrameDescriptor FDescriptor: frameTable){
-            if (FDescriptor.getPinCount() > 0) FDescriptor.decreasePinCount();
-            else if (FDescriptor.getPinCount()==0) FDescriptor.setUnpinned();
-            else throw new PageNotPinnedException();
-        }
+            if (unpinPageId == FDescriptor.getPageNum()) {
+                if (FDescriptor.getPinCount() > 0) FDescriptor.decreasePinCount();
+                else if (FDescriptor.getPinCount()==0) FDescriptor.setUnpinned();
+                else throw new PageNotPinnedException();
+                 }
+    }
     }
 
     /**
@@ -302,13 +283,14 @@ public class BufferManager
         throws IOException
     {
         DBFile dbFile = new DBFile(fileName);
-        if (ifFull(frameTable) != FRAME_IS_FULL){
-            int firstPageId = dbFile.allocatePages(numPages);
-            // Summing the first page is not empty
-            Page curPage = pinPage(firstPageId, fileName, false);
-        }
-        Pair<Integer, Page> pair = new Pair(firstPageId, curPage);
-        return pair;       
+        if  (ifFull(frameTable) == FRAME_IS_FULL){
+            return null;
+       }
+        int firstPageId = dbFile.allocatePages(numPages);
+        // Summing the first page is not empty
+        Page curPage = pinPage(firstPageId, fileName, false);
+        Pair pair = new Pair(firstPageId, curPage);
+        return pair;     
     }
 
     /**
@@ -362,5 +344,6 @@ public class BufferManager
     */
     public int findFrame(int pageId, String fileName)
     {
+        return 1; 
     }
-}
+  }  

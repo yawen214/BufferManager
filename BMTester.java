@@ -194,7 +194,7 @@ public class BMTester
         
         // Run the tests.
         runTest(new Test1());
-        runTest(new Test2());
+        //runTest(new Test2());
         
         // Clean up
         DBFile.erase(FILENAME);
