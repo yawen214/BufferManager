@@ -45,6 +45,7 @@ public class BMTester
                 System.out.println("after pinPage " + i);
                 byte[] data = ("This is test 1 for page " + i).getBytes();
                 System.arraycopy(data,0,page.data,0,data.length);
+               
                 bufMgr.unpinPage(i,filename,true);
                 System.out.println("after unpinPage " + i);
             }
@@ -54,13 +55,17 @@ public class BMTester
             for (int i=first; i<=last; i++)
             {
                 Page page = bufMgr.pinPage(i,filename,false);
+                
                 if (page == null)
                     throw new TestFailedException("Unable to pin page " +
                                                   "2nd time");
                 String readBack = new String(page.data);
                 String orig = "This is test 1 for page " + i;
+                
                 System.out.println("PAGE[" + i + "]: " +
                                  readBack.substring(0,orig.length()));
+                
+                
                 if (!readBack.regionMatches(0,orig,0,orig.length()))
                     throw new TestFailedException("Page content incorrect");
                 bufMgr.unpinPage(i,filename,false);
@@ -81,7 +86,8 @@ public class BMTester
 
             // Allocate some pages
             bufMgr.newPage(5*bufMgr.poolSize(),filename);
-            bufMgr.unpinPage(0,filename,false);
+            bufMgr.unpinPage(5,filename,false);
+//            bufMgr.unpinPage(1, filename, false);
 
             // Pin and unpin a series of pages, the first half are loved,
             // the latter half are hated.
@@ -103,12 +109,16 @@ public class BMTester
                 System.out.println("Page " + (i+5) +" at frame " + frame[i] +
                                    " is pinned.");
             }
+            System.out.println("Hello, the first part of test 2 is done!/n");
         
+            
             //Try pinning an extra page
             page = bufMgr.pinPage(bufMgr.poolSize()+6,filename,false);
-            if (page != null)
+            if (page == null)
                 throw new TestFailedException("Pinned page in full buffer");
+            System.out.println("\n Hello, the second part of test 2 is done!/n");
 
+                       
             //Start unpinning pages
             for (int i=bufMgr.poolSize()-1; i>=0 ;i--)
             {
@@ -116,6 +126,7 @@ public class BMTester
                 System.out.println("Page " + (i+5) +" at frame " + frame[i] +
                                    " is unpinned.");
             }
+            System.out.println("\nHello, the third part of test 2 is done!/n");
 
             //Start pinning a new set of pages again.  The page frames
             //should be exactly the same order as the previous one
@@ -132,6 +143,7 @@ public class BMTester
                 if (spot != frame[i-bufMgr.poolSize()])
                     throw new TestFailedException("Frame number incorrect");
             }
+            System.out.println("\nHello, the fourth part of test 2 is done!/n");
 
             //Unpin half the pages in order
             for (int i=bufMgr.poolSize(); i < 2*bufMgr.poolSize(); i+=2)
@@ -140,6 +152,7 @@ public class BMTester
                 System.out.println("Page " + (i+5) +" at frame " +
                     frame[i-bufMgr.poolSize()] + " is unpinned.");
             }
+            System.out.println("\nHello, the fifth part of test 2 is done!/n");
 
             //Now, pin a new set of pages
             //Again, it should resemble the previous sequence
@@ -156,6 +169,7 @@ public class BMTester
                 if (spot != frame[i-2*bufMgr.poolSize()])
                     throw new TestFailedException("Frame number incorrect");
             }
+                System.out.println("\nHello, the las part of test 2 is done!/n");
         }
     }
 
@@ -194,7 +208,7 @@ public class BMTester
         
         // Run the tests.
         runTest(new Test1());
-        //runTest(new Test2());
+        runTest(new Test2());
         
         // Clean up
         DBFile.erase(FILENAME);

@@ -16,6 +16,7 @@ public class BufferManager
     public static class PagePinnedException extends RuntimeException {};
 
 
+
     /**
      * Value to use for an invalid page id.
      */
@@ -127,14 +128,17 @@ public class BufferManager
     *@param frameTable is a list of FrameDescriptor we are about to check
     *@return index of replacement on the frameDescriptor
     **/
-    private int getClockIndex(FrameDescriptor[] frameTable)
+    private Integer getClockIndex(FrameDescriptor[] frameTable)
     {
         int curIndex = curClockIndex;
         curIndex++;
         FrameDescriptor curFDescriptor;
         boolean isFound = false;
         int poolSize = poolSize();
-        while (!isFound){
+        int count = 0;
+        while (!isFound && count<poolSize+1){
+            System.out.println("curIndex now is that: " +curIndex);
+            System.out.println("The count right now is: " + count + "\n");
             curFDescriptor = frameTable[(curIndex%poolSize)];
             if (curFDescriptor.getPinCount() == 0){
                 if (!frameTable[curIndex%poolSize].ifPinned()){
@@ -144,8 +148,10 @@ public class BufferManager
                     curFDescriptor.setUnpinned();
                 }
             }
-                    curIndex++;
+            else count++;
+            curIndex++;
         }
+        if (count == poolSize) return (Integer) null;
         return this.curClockIndex;
     }
     
@@ -188,6 +194,7 @@ public class BufferManager
     public Page pinPage(int pinPageId, String fileName, boolean emptyPage)
         throws IOException
     {
+        //Question: How shall we deal with bufferPool full of pinned pages?
         DBFile curDBFile = new DBFile(fileName); // create a new DBFile 
         Page curPage;
         int poolSize = poolSize();
@@ -204,7 +211,6 @@ public class BufferManager
         //Now that the page is not in the buffer pool yet, check if the frameTable is full
         if (ifFull(frameTable) == FRAME_IS_FULL){
             //replace
-
             int indexOfReplace = getClockIndex(frameTable); //find the index of replacement
             int localPageId=frameTable[indexOfReplace].getPageNum();
             flushPage(localPageId,fileName); // flushPage takes care of page that is dirty
@@ -300,7 +306,7 @@ public class BufferManager
        }
         int firstPageId = dbFile.allocatePages(numPages);
         // Summing the first page is not empty
-        Page curPage = pinPage(firstPageId, fileName, false);
+        Page curPage = pinPage(firstPageId, fileName, true);
         Pair pair = new Pair(firstPageId, curPage);
         return pair;     
     }
@@ -367,6 +373,9 @@ public class BufferManager
     */
     public int findFrame(int pageId, String fileName)
     {
-        return 1; 
+        //Qeustion: shall we check if the data is actually in the database system?
+        //Question: is Buffer pool location the same as frame location?
+        if (myMap.containsKey(pageId)) return myMap.get(pageId);
+        return -1;
     }
   }  
