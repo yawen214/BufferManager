@@ -15,8 +15,6 @@ public class BufferManager
         extends RuntimeException {};
     public static class PagePinnedException extends RuntimeException {};
 
-
-
     /**
      * Value to use for an invalid page id.
      */
@@ -94,8 +92,8 @@ public class BufferManager
     // We use this hash table to store the page ID as the key and the index of the page in the bufferpool as the value;
     private HashMap<Integer, Integer> myMap = new HashMap<Integer, Integer>();
     private int curClockIndex = 0;
-    private final int FRAME_IS_FULL = -20;
-    //private int poolSize;
+    private final int FRAME_IS_FULL = -20; //frameTable is full
+    private final int FRAME_PIN_FULL = -30; //frameTable is full and all frames are pinned
     
     /**
      * Creates a buffer manager with the specified size.
@@ -103,7 +101,6 @@ public class BufferManager
      */
     public BufferManager(int poolSize)
     {
-        //this.poolSize = poolSize;
         bufferPool = new Page[poolSize];
         frameTable= new FrameDescriptor[poolSize];
     }
@@ -151,7 +148,7 @@ public class BufferManager
             else count++;
             curIndex++;
         }
-        if (count == poolSize) return (Integer) null;
+        if (count == poolSize) return FRAME_PIN_FULL;
         return this.curClockIndex;
     }
     
@@ -194,24 +191,29 @@ public class BufferManager
     public Page pinPage(int pinPageId, String fileName, boolean emptyPage)
         throws IOException
     {
-        //Question: How shall we deal with bufferPool full of pinned pages?
         DBFile curDBFile = new DBFile(fileName); // create a new DBFile 
         Page curPage;
         int poolSize = poolSize();
         // If  the page is already in the pool, return a pointer to it;
         if (checkIfInPool(pinPageId)) {
             int pageIndex = myMap.get(pinPageId); //hash table stroing the pageId as the key and the index of the page in the buffer pool as the value
-            for (int i=0; i<poolSize; i++){
+           
+            /* replaced by using pageIndex directly
+            for (int i=0; i<poolSize; i++){ //Loop through the frameTable to increase the pincount of the pinned page
                 if (frameTable[i].getPageNum() == pinPageId){
                     frameTable[i].increasePinCount();
                     return bufferPool[pageIndex];
                 }
             }
+            */
+            frameTable[pageIndex] .increasePinCount(); //increase pin count
+            return bufferPool[pageIndex];
         }
         //Now that the page is not in the buffer pool yet, check if the frameTable is full
         if (ifFull(frameTable) == FRAME_IS_FULL){
             //replace
             int indexOfReplace = getClockIndex(frameTable); //find the index of replacement
+            if (indexOfReplace == FRAME_PIN_FULL) return null; //If all frames are pinned, return null
             int localPageId=frameTable[indexOfReplace].getPageNum();
             flushPage(localPageId,fileName); // flushPage takes care of page that is dirty
             // read the actual page from the database.
@@ -237,6 +239,7 @@ public class BufferManager
         }
         // When the frame descriptor still has empty space: add to existing empty frames
         int indexOfemptyFrame = ifFull(frameTable);
+        System.out.println("indexOfemptyFrame is:" + indexOfemptyFrame);
         FrameDescriptor curFDescriptor = new FrameDescriptor();
         curFDescriptor.setpageNum(pinPageId);
         curFDescriptor.increasePinCount();
