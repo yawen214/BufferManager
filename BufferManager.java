@@ -91,7 +91,7 @@ public class BufferManager
     private FrameDescriptor[] frameTable;
     // We use this hash table to store the page ID as the key and the index of the page in the bufferpool as the value;
     private HashMap<Integer, Integer> myMap = new HashMap<Integer, Integer>();
-    private int curClockIndex = 0;
+    private int curClockIndex;
     private final int FRAME_IS_FULL = -20; //frameTable is full
     private final int FRAME_PIN_FULL = -30; //frameTable is full and all frames are pinned
     
@@ -103,6 +103,7 @@ public class BufferManager
     {
         bufferPool = new Page[poolSize];
         frameTable= new FrameDescriptor[poolSize];
+        curClockIndex = 0;
     }
     
     /**
@@ -127,20 +128,22 @@ public class BufferManager
     **/
     private Integer getClockIndex(FrameDescriptor[] frameTable)
     {
-        int curIndex = curClockIndex;
-        curIndex++;
         FrameDescriptor curFDescriptor;
         boolean isFound = false;
         int poolSize = poolSize();
+        int curIndex = (curClockIndex%poolSize);
+        curIndex++;
         int count = 0;
         while (!isFound && count<poolSize+1){
-            System.out.println("curIndex now is that: " +curIndex);
+            System.out.println("curIndex now is that: " +curIndex%poolSize);
             System.out.println("The count right now is: " + count + "\n");
             curFDescriptor = frameTable[(curIndex%poolSize)];
             if (curFDescriptor.getPinCount() == 0){
                 if (!frameTable[curIndex%poolSize].ifPinned()){
                     this.curClockIndex = Arrays.asList(frameTable).indexOf(curFDescriptor);
                     isFound = true;
+                    System.out.println("OMG< find spot:" + curClockIndex); 
+                    //System.out.println("now index to replace found at:" +)
                 }else {
                     curFDescriptor.setUnpinned();
                 }
@@ -149,7 +152,7 @@ public class BufferManager
             curIndex++;
         }
         if (count == poolSize) return FRAME_PIN_FULL;
-        return this.curClockIndex;
+        return this.curClockIndex%poolSize;
     }
     
     
@@ -197,15 +200,6 @@ public class BufferManager
         // If  the page is already in the pool, return a pointer to it;
         if (checkIfInPool(pinPageId)) {
             int pageIndex = myMap.get(pinPageId); //hash table stroing the pageId as the key and the index of the page in the buffer pool as the value
-           
-            /* replaced by using pageIndex directly
-            for (int i=0; i<poolSize; i++){ //Loop through the frameTable to increase the pincount of the pinned page
-                if (frameTable[i].getPageNum() == pinPageId){
-                    frameTable[i].increasePinCount();
-                    return bufferPool[pageIndex];
-                }
-            }
-            */
             frameTable[pageIndex] .increasePinCount(); //increase pin count
             return bufferPool[pageIndex];
         }
@@ -235,6 +229,7 @@ public class BufferManager
             // delete the old entry in the hashmap and insert new entry
             int indexForInsert = Arrays.asList(bufferPool).indexOf(curPage);
             myMap.put(pinPageId, indexForInsert);
+            System.out.println ("find frame "+indexOfReplace +"forpage " + localPageId + "& pinID" + pinPageId);
             return curPage;          
         }
         // When the frame descriptor still has empty space: add to existing empty frames
@@ -378,7 +373,10 @@ public class BufferManager
     {
         //Qeustion: shall we check if the data is actually in the database system?
         //Question: is Buffer pool location the same as frame location?
-        if (myMap.containsKey(pageId)) return myMap.get(pageId);
+        if (myMap.containsKey(pageId)) {
+            System.out.println ("current frame is "+ myMap.get(pageId));
+            return myMap.get(pageId);
+        }
         return -1;
     }
   }  
