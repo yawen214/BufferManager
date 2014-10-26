@@ -7,6 +7,7 @@ import java.util.HashMap;
  * @author Dave Musicant, with considerable material reused from the
  * UW-Madison Minibase project
  * @author Modified by Yawen Chen and Tao Liu
+ * @phase 2
  */
 
 public class BufferManager
@@ -136,15 +137,11 @@ public class BufferManager
         int curIndex = (curClockIndex%poolSize);
         int count = 0;
         while (!isFound && count<poolSize+1){
-            System.out.println("curIndex now is that: " +curIndex%poolSize);
-            System.out.println("The count right now is: " + count + "\n");
             curFDescriptor = frameTable[(curIndex%poolSize)];
             if (curFDescriptor.getPinCount() == 0){
                 if (!frameTable[curIndex%poolSize].ifPinned()){
                     this.curClockIndex = Arrays.asList(frameTable).indexOf(curFDescriptor);
                     isFound = true;
-                    System.out.println("OMG< find spot:" + curClockIndex); 
-                    //System.out.println("now index to replace found at:" +)
                 }else {
                     curFDescriptor.setUnpinned();
                 }
@@ -209,7 +206,6 @@ public class BufferManager
             //replace
             int indexOfReplace = getClockIndex(frameTable); //find the index of replacement
             if (indexOfReplace == FRAME_PIN_FULL) {
-                System.out.println("HAHAHAHAHAHA: NULLL!");
                 return null; 
                 }//If all frames are pinned, return null
             int localPageId=frameTable[indexOfReplace].getPageNum();
@@ -233,13 +229,11 @@ public class BufferManager
             // delete the old entry in the hashmap and insert new entry
             int indexForInsert = Arrays.asList(bufferPool).indexOf(curPage);
             myMap.put(pinPageId, indexForInsert);
-            System.out.println ("find frame "+indexOfReplace +"forpage " + localPageId + "& pinID" + pinPageId);
             this.curClockIndex++;
             return curPage;          
         }
         // When the frame descriptor still has empty space: add to existing empty frames
         int indexOfemptyFrame = ifFull(frameTable);
-        System.out.println("indexOfemptyFrame is:" + indexOfemptyFrame);
         FrameDescriptor curFDescriptor = new FrameDescriptor();
         curFDescriptor.setpageNum(pinPageId);
         curFDescriptor.increasePinCount();
@@ -258,7 +252,6 @@ public class BufferManager
         int indexOfValue = Arrays.asList(bufferPool).indexOf(curPage);
         myMap.put(pinPageId, indexOfValue);
         this.curClockIndex++;
-        System.out.println("--------------current clock index is:" +this.curClockIndex);
         return curPage;        
     }
 
@@ -278,16 +271,10 @@ public class BufferManager
     public void unpinPage(int unpinPageId, String fileName, boolean dirty)
         throws IOException
     {
-        if (unpinPageId == 24){
-            System.out.println("for page 24-----FDescriptor != null is: " + (frameTable[0] != null));
-            System.out.println("frameTable[0] is "+ frameTable[0].getPageNum());
-            System.out.println("unpinPageId == FDescriptor.getPageNum() is : " + (unpinPageId == frameTable[0].getPageNum()));
-        }
-        for (FrameDescriptor FDescriptor: frameTable){        
+            for (FrameDescriptor FDescriptor: frameTable){        
             if (FDescriptor != null && unpinPageId == FDescriptor.getPageNum()) {
                 if (FDescriptor.getPinCount() > 0) {
                     FDescriptor.decreasePinCount();
-                    System.out.println("Here we -- the pincount by one, and now it is !!!!!!!: "+FDescriptor.getPinCount());
                 }
                 else if (FDescriptor.getPinCount()==0) FDescriptor.setUnpinned();
                 else throw new PageNotPinnedException();
@@ -318,7 +305,6 @@ public class BufferManager
             return null;
        }
         int firstPageId = dbFile.allocatePages(numPages);
-        System.out.println("========pageid of the first page is "+ firstPageId);
         // Summing the first page is not empty
         Page curPage = pinPage(firstPageId, fileName, false);
         Pair pair = new Pair(firstPageId, curPage);
@@ -390,7 +376,6 @@ public class BufferManager
         //Qeustion: shall we check if the data is actually in the database system?
         //Question: is Buffer pool location the same as frame location?
         if (myMap.containsKey(pageId)) {
-            System.out.println ("current frame is "+ myMap.get(pageId));
             return myMap.get(pageId);
         }
         return -1;
