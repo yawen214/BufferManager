@@ -84,7 +84,9 @@ public class BufferManager
     }
     
     
-
+    public int checkPinCount (int temp){
+        return frameTable[temp].getPinCount();
+    }
     // Here are some private variables to get you started. You'll
     // probably need more.
     private Page[] bufferPool;
@@ -126,13 +128,12 @@ public class BufferManager
     *@param frameTable is a list of FrameDescriptor we are about to check
     *@return index of replacement on the frameDescriptor
     **/
-    private Integer getClockIndex(FrameDescriptor[] frameTable)
+    private int getClockIndex(FrameDescriptor[] frameTable)
     {
         FrameDescriptor curFDescriptor;
         boolean isFound = false;
         int poolSize = poolSize();
         int curIndex = (curClockIndex%poolSize);
-        curIndex++;
         int count = 0;
         while (!isFound && count<poolSize+1){
             System.out.println("curIndex now is that: " +curIndex%poolSize);
@@ -151,8 +152,8 @@ public class BufferManager
             else count++;
             curIndex++;
         }
-        if (count == poolSize) return FRAME_PIN_FULL;
-        return this.curClockIndex%poolSize;
+        if (count >= poolSize) return FRAME_PIN_FULL;
+        return this.curClockIndex;
     }
     
     
@@ -207,7 +208,10 @@ public class BufferManager
         if (ifFull(frameTable) == FRAME_IS_FULL){
             //replace
             int indexOfReplace = getClockIndex(frameTable); //find the index of replacement
-            if (indexOfReplace == FRAME_PIN_FULL) return null; //If all frames are pinned, return null
+            if (indexOfReplace == FRAME_PIN_FULL) {
+                System.out.println("HAHAHAHAHAHA: NULLL!");
+                return null; 
+                }//If all frames are pinned, return null
             int localPageId=frameTable[indexOfReplace].getPageNum();
             flushPage(localPageId,fileName); // flushPage takes care of page that is dirty
             // read the actual page from the database.
@@ -219,7 +223,7 @@ public class BufferManager
             }
             // update the current FDescriptor.
             FrameDescriptor curFDescriptor = new FrameDescriptor();
-            curFDescriptor.setpageNum(localPageId);
+            curFDescriptor.setpageNum(pinPageId);
             curFDescriptor.increasePinCount();
             curFDescriptor.setFileName(fileName);
             //add the new frame in to the frame tableble
@@ -230,6 +234,7 @@ public class BufferManager
             int indexForInsert = Arrays.asList(bufferPool).indexOf(curPage);
             myMap.put(pinPageId, indexForInsert);
             System.out.println ("find frame "+indexOfReplace +"forpage " + localPageId + "& pinID" + pinPageId);
+            this.curClockIndex++;
             return curPage;          
         }
         // When the frame descriptor still has empty space: add to existing empty frames
@@ -252,6 +257,8 @@ public class BufferManager
         // establish the key-value relationship in the myMap
         int indexOfValue = Arrays.asList(bufferPool).indexOf(curPage);
         myMap.put(pinPageId, indexOfValue);
+        this.curClockIndex++;
+        System.out.println("--------------current clock index is:" +this.curClockIndex);
         return curPage;        
     }
 
@@ -271,9 +278,17 @@ public class BufferManager
     public void unpinPage(int unpinPageId, String fileName, boolean dirty)
         throws IOException
     {
-        for (FrameDescriptor FDescriptor: frameTable){
+        if (unpinPageId == 24){
+            System.out.println("for page 24-----FDescriptor != null is: " + (frameTable[0] != null));
+            System.out.println("frameTable[0] is "+ frameTable[0].getPageNum());
+            System.out.println("unpinPageId == FDescriptor.getPageNum() is : " + (unpinPageId == frameTable[0].getPageNum()));
+        }
+        for (FrameDescriptor FDescriptor: frameTable){        
             if (FDescriptor != null && unpinPageId == FDescriptor.getPageNum()) {
-                if (FDescriptor.getPinCount() > 0) FDescriptor.decreasePinCount();
+                if (FDescriptor.getPinCount() > 0) {
+                    FDescriptor.decreasePinCount();
+                    System.out.println("Here we -- the pincount by one, and now it is !!!!!!!: "+FDescriptor.getPinCount());
+                }
                 else if (FDescriptor.getPinCount()==0) FDescriptor.setUnpinned();
                 else throw new PageNotPinnedException();
                  }
@@ -303,8 +318,9 @@ public class BufferManager
             return null;
        }
         int firstPageId = dbFile.allocatePages(numPages);
+        System.out.println("========pageid of the first page is "+ firstPageId);
         // Summing the first page is not empty
-        Page curPage = pinPage(firstPageId, fileName, true);
+        Page curPage = pinPage(firstPageId, fileName, false);
         Pair pair = new Pair(firstPageId, curPage);
         return pair;     
     }
