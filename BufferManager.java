@@ -322,6 +322,7 @@ public class BufferManager
      */
     public void freePage(int pageId, String fileName) throws IOException
     {
+        
     }
 
     /**
