@@ -322,7 +322,15 @@ public class BufferManager
      */
     public void freePage(int pageId, String fileName) throws IOException
     {
-        
+        DBFile dbFile = new DBFile(fileName);
+        for (FrameDescriptor FDescriptor: frameTable){
+            if (FDescriptor != null && FDescriptor.getPinCount()== 0){
+                dbFile.deallocatePages(pageId, 1);
+            }
+            else {
+                throw new PagePinnedException();
+            }
+        }
     }
 
     /**
@@ -361,6 +369,16 @@ public class BufferManager
      */
     public void flushAllPages() throws IOException
     {
+        DBFile dbFile;
+        for (FrameDescriptor FDescriptor: frameTable){
+            if (FDescriptor != null && FDescriptor.getDirty()){
+                String curFileName = FDescriptor.getFileName();
+                int curPageId=FDescriptor.getPageNum();
+                Page curPage = bufferPool[myMap.get(curPageId)];
+                dbFile = new DBFile(curFileName);
+                dbFile.writePage(curPageId, curPage);
+            }
+        }
     }
         
     /**
