@@ -39,7 +39,7 @@ public class BufferManager
         }
 
         private void setFileName(String str){
-            this.fileName= fileName;
+            this.fileName= str;
         }
 
         private String getFileName(){
@@ -215,7 +215,7 @@ public class BufferManager
             //check to see if the page is empty, if so we don't need to read the page from the disk . but we still need to
             //add this empty page and pin it
             if (!emptyPage){
-                curDBFile.readPage(localPageId, curPage);
+                curDBFile.readPage(pinPageId, curPage);
             }
             // update the current FDescriptor.
             FrameDescriptor curFDescriptor = new FrameDescriptor();
